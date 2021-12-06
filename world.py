@@ -5,8 +5,9 @@ from arcade import PymunkPhysicsEngine, SpriteList, Camera
 from pyglet.gl import GL_NEAREST
 from pyglet.math import Vec2
 
+import entities
 from entities import Player
-from map import Room
+from map import Room, Level
 
 
 class DungeonWorld(arcade.View):
@@ -15,14 +16,17 @@ class DungeonWorld(arcade.View):
         self.player: Player = Player(scale=4)
         self.cam_player: Camera = Camera(800, 600)
         self.cam_ui: Camera = Camera(800, 600)
-        self.sprites: SpriteList = SpriteList()
+        self.wall_list: SpriteList = SpriteList()
+        self.floor_list: SpriteList = SpriteList()
+        self.entities: SpriteList = SpriteList()
         self.physics_engine = PymunkPhysicsEngine()
         self.physics_engine.add_sprite(
-            self.player, moment_of_inertia=math.inf, elasticity=0
+            self.player, moment_of_inertia=math.inf, elasticity=0, damping=0.01
         )
-        self.room = Room()
-        self.room.load(-128, -128, self.sprites, self.physics_engine)
-        self.sprites.append(self.player)
+        self.room = Level()
+        coords = self.room.load(self.wall_list, self.floor_list, self.physics_engine)
+        self.physics_engine.get_physics_object(self.player).body.position = coords
+        self.entities.append(self.player)
 
     def move_cam_to_player(self):
         x, y = self.player.position
@@ -38,7 +42,9 @@ class DungeonWorld(arcade.View):
     def on_draw(self):
         arcade.start_render()
         self.cam_player.use()
-        self.sprites.draw(filter=GL_NEAREST)
+        self.floor_list.draw(filter=GL_NEAREST)
+        self.wall_list.draw(filter=GL_NEAREST)
+        self.entities.draw(filter=GL_NEAREST)
         # self.cam_ui.use()
         y = 600 // 2 - 200
         arcade.draw_text(f'x:{self.player.joystick.x}', 200, y)

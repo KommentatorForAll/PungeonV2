@@ -1,21 +1,44 @@
+from abc import ABC
+
 import arcade
-from arcade import Sprite
+from arcade import Sprite, AStarBarrierList
 from pyglet.input import Joystick
 from pymunk import Vec2d
 
 DEAD_ZONE = 0.1
 
 
-class Entity(Sprite):
+class Entity(Sprite, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def move(self, physics_engine: arcade.PymunkPhysicsEngine):
+        raise NotImplementedError()
+
+
+class Enemy(Entity, ABC):
+
+    def __init__(self, target, walls, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target = target
+        self.walls = walls
+
+
+class Zombie(Enemy):
+
+    def __init__(self, target, walls, *args, **kwargs):
+        super().__init__(target, walls, *args, **kwargs)
+        self.as_bl = AStarBarrierList(self, self.walls, 1, -1000000000, 1000000000, -1000000000, 1000000000)
+
+    def move(self, physics_engine: arcade.PymunkPhysicsEngine):
+        print(arcade.astar_calculate_path(self.position, self.target.position, self.as_bl))
 
 
 class Player(Entity):
     def __init__(self, *args, **kwargs):
         super().__init__('./assets/imgs/player/player_f.png', *args, **kwargs)
-        self.speed = 100
+        self.speed = 1000
         self.running = False
         # Get list of game controllers that are available
         joysticks = arcade.get_joysticks()
@@ -41,7 +64,7 @@ class Player(Entity):
         y = 0 if -DEAD_ZONE < self.joystick.y < DEAD_ZONE else -self.joystick.y
         vec = Vec2d(x, y)
         movement = vec * self.speed * (self.running + 1)
-        physics_engine.set_velocity(self, movement)
+        physics_engine.apply_force(self, movement)
 
     # noinspection PyMethodMayBeStatic
     def on_joybutton_press(self, _joystick, button):

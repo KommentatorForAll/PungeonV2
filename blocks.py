@@ -1,13 +1,12 @@
-import math
+from abc import ABC
 
-import arcade
 from arcade import Sprite, SpriteList, PymunkPhysicsEngine
 
 
-class Tile(Sprite):
+class Tile(Sprite, ABC):
 
     def add_to_list(self, sprite_list: SpriteList, physics_engine: PymunkPhysicsEngine, x: int, y: int):
-        raise NotImplementedError('Tried to call function of an abstract class')
+        raise NotImplementedError()
 
 
 class Wall(Tile):
