@@ -27,9 +27,16 @@ class Enemy(Entity, ABC):
 
 class Zombie(Enemy):
 
-    def __init__(self, target, walls, *args, **kwargs):
-        super().__init__(target, walls, *args, **kwargs)
-        self.as_bl = AStarBarrierList(self, self.walls, 1, -1000000000, 1000000000, -1000000000, 1000000000)
+    def __init__(self, target, walls, physics_engine, *args, **kwargs):
+        super().__init__(target, walls, filename='./assets/imgs/player/slime_blue.png', *args, **kwargs)
+        self.physics_engines = physics_engine
+        self.as_bl = None
+
+    def on_update(self, delta_time: float = 1 / 60):
+        if self.as_bl is None:
+            self.as_bl = AStarBarrierList(self, self.walls, 1, 0, 128*64, 0, 128*64)
+        self.move(self.physics_engines)
+        print('updated')
 
     def move(self, physics_engine: arcade.PymunkPhysicsEngine):
         print(arcade.astar_calculate_path(self.position, self.target.position, self.as_bl))

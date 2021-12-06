@@ -19,12 +19,16 @@ class DungeonWorld(arcade.View):
         self.wall_list: SpriteList = SpriteList()
         self.floor_list: SpriteList = SpriteList()
         self.entities: SpriteList = SpriteList()
+        self.enemies: SpriteList = SpriteList()
         self.physics_engine = PymunkPhysicsEngine()
         self.physics_engine.add_sprite(
             self.player, moment_of_inertia=math.inf, elasticity=0, damping=0.01
         )
         self.room = Level()
         coords = self.room.load(self.wall_list, self.floor_list, self.physics_engine)
+        z = entities.Zombie(self.player, self.wall_list, self.physics_engine)
+        z.position = coords[0], coords[1] + 64
+        self.enemies.append(z)
         self.physics_engine.get_physics_object(self.player).body.position = coords
         self.entities.append(self.player)
 
@@ -37,6 +41,8 @@ class DungeonWorld(arcade.View):
     def on_update(self, delta_time: float):
         self.physics_engine.step(delta_time)
         self.player.move(self.physics_engine)
+        for e in self.enemies:
+            e.on_update()
         self.move_cam_to_player()
 
     def on_draw(self):
