@@ -1,36 +1,47 @@
 import math
+from typing import Optional
 
 import arcade
 from arcade import PymunkPhysicsEngine, SpriteList, Camera
 from pyglet.gl import GL_NEAREST
 from pyglet.math import Vec2
 
-import entities
 from entities import Player
-from map import Room, Level
+from level import Level, Minimap
 
 
 class DungeonWorld(arcade.View):
     def __init__(self):
         super().__init__()
-        self.player: Player = Player(scale=4)
+        self.room: Optional[Level] = None
+        self.player: Player = Player(self, scale=4)
         self.cam_player: Camera = Camera(800, 600)
         self.cam_ui: Camera = Camera(800, 600)
         self.wall_list: SpriteList = SpriteList()
         self.floor_list: SpriteList = SpriteList()
         self.entities: SpriteList = SpriteList()
         self.enemies: SpriteList = SpriteList()
+
+        self.minimap = Minimap((256, 256), (255, 255, 255, 255), (128, 128))
+
         self.physics_engine = PymunkPhysicsEngine()
         self.physics_engine.add_sprite(
             self.player, moment_of_inertia=math.inf, elasticity=0, damping=0.01
         )
-        self.room = Level()
-        coords = self.room.load(self.wall_list, self.floor_list, self.physics_engine)
-        z = entities.Zombie(self.player, self.wall_list, self.physics_engine)
-        z.position = coords[0], coords[1] + 64
-        self.enemies.append(z)
+        coords = self.load_level(Level())
         self.physics_engine.get_physics_object(self.player).body.position = coords
         self.entities.append(self.player)
+
+    def load_level(self, level: Level):
+        self.wall_list = SpriteList()
+        self.floor_list = SpriteList()
+        for spr in self.physics_engine.sprites.copy():
+            if spr is self.player:
+                continue
+            self.physics_engine.remove_sprite(spr)
+        coords = level.load(self.wall_list, self.floor_list, self.physics_engine)
+        self.room = level
+        return coords
 
     def move_cam_to_player(self):
         x, y = self.player.position
@@ -51,17 +62,23 @@ class DungeonWorld(arcade.View):
         self.floor_list.draw(filter=GL_NEAREST)
         self.wall_list.draw(filter=GL_NEAREST)
         self.entities.draw(filter=GL_NEAREST)
-        # self.cam_ui.use()
+        self.enemies.draw(filter=GL_NEAREST)
+
+        self.cam_ui.use()
+        self.minimap.update(self.wall_list, self.entities)
+        self.minimap.draw()
+
         y = 600 // 2 - 200
-        arcade.draw_text(f'x:{self.player.joystick.x}', 200, y)
+        arcade.draw_text(f'x:{self.player.joystick.x}', 300, y)
         y += 20
-        arcade.draw_text(f'y:{self.player.joystick.y}', 200, y)
+        arcade.draw_text(f'y:{self.player.joystick.y}', 300, y)
         y += 20
-        arcade.draw_text(f'z:{self.player.joystick.z}', 200, y)
+        arcade.draw_text(f'z:{self.player.joystick.z}', 300, y)
         y += 20
-        arcade.draw_text(f'rx:{self.player.joystick.rx}', 200, y)
+        arcade.draw_text(f'rx:{self.player.joystick.rx}', 300, y)
         y += 20
-        arcade.draw_text(f'ry:{self.player.joystick.ry}', 200, y)
+        arcade.draw_text(f'ry:{self.player.joystick.ry}', 300, y)
         y += 20
-        arcade.draw_text(f'rz:{self.player.joystick.rz}', 200, y)
+        arcade.draw_text(f'rz:{self.player.joystick.rz}', 300, y)
         y += 20
+        arcade.draw_text(f'{self.player.position=}', 300, y)

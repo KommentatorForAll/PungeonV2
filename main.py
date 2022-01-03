@@ -6,7 +6,7 @@ from windows import GameWindow
 
 
 def main():
-    util.init_random("2")
+    util.init_random("500000")
     window = GameWindow()
     dungeon_view = world.DungeonWorld()
     window.show_view(dungeon_view)

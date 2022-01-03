@@ -1,50 +1,18 @@
-from abc import ABC
-
 import arcade
-from arcade import Sprite, AStarBarrierList
 from pyglet.input import Joystick
 from pymunk import Vec2d
 
-DEAD_ZONE = 0.1
-
-
-class Entity(Sprite, ABC):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def move(self, physics_engine: arcade.PymunkPhysicsEngine):
-        raise NotImplementedError()
-
-
-class Enemy(Entity, ABC):
-
-    def __init__(self, target, walls, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.target = target
-        self.walls = walls
-
-
-class Zombie(Enemy):
-
-    def __init__(self, target, walls, physics_engine, *args, **kwargs):
-        super().__init__(target, walls, filename='./assets/imgs/player/slime_blue.png', *args, **kwargs)
-        self.physics_engines = physics_engine
-        self.as_bl = None
-
-    def on_update(self, delta_time: float = 1 / 60):
-        if self.as_bl is None:
-            self.as_bl = AStarBarrierList(self, self.walls, 1, 0, 128*64, 0, 128*64)
-        self.move(self.physics_engines)
-        print('updated')
-
-    def move(self, physics_engine: arcade.PymunkPhysicsEngine):
-        print(arcade.astar_calculate_path(self.position, self.target.position, self.as_bl))
+import level
+from .entity import Entity
 
 
 class Player(Entity):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, world, *args, **kwargs):
         super().__init__('./assets/imgs/player/player_f.png', *args, **kwargs)
+
+        self.room = None
+        self.world = world
+
         self.speed = 1000
         self.running = False
         # Get list of game controllers that are available
@@ -67,28 +35,25 @@ class Player(Entity):
             self.joystick = None
 
     def move(self, physics_engine: arcade.PymunkPhysicsEngine):
+        from . import DEAD_ZONE
         x = 0 if -DEAD_ZONE < self.joystick.x < DEAD_ZONE else self.joystick.x
         y = 0 if -DEAD_ZONE < self.joystick.y < DEAD_ZONE else -self.joystick.y
         vec = Vec2d(x, y)
         movement = vec * self.speed * (self.running + 1)
         physics_engine.apply_force(self, movement)
 
-    # noinspection PyMethodMayBeStatic
+        self.room = self.world.room.get_room(self)
+
     def on_joybutton_press(self, _joystick, button):
         """ Handle button-down event for the joystick """
         print("Button {} down".format(button))
         if button == 2:
             self.running = True
+        elif button == 7:
+            self.physics_engines[0].get_physics_object(self).body.position = self.world.load_level(level.Level())
 
-    # noinspection PyMethodMayBeStatic
     def on_joybutton_release(self, _joystick, button):
         """ Handle button-up event for the joystick """
         print("Button {} up".format(button))
         if button == 2:
             self.running = False
-
-    # noinspection PyMethodMayBeStatic
-    def on_joyaxis_motion(self, joystick, axis, value):
-        if value < -DEAD_ZONE or DEAD_ZONE < value:
-            # print(f"axis: {axis}; value: {value}")
-            pass
