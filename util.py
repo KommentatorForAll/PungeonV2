@@ -25,3 +25,11 @@ def choice(options):
         raise ValueError("random must be initialized")
     _calls += 1
     return _random.choice(options)
+
+
+def choices(**kwargs):
+    global _random, _calls
+    if _random is None:
+        raise ValueError("random must be initialized")
+    _calls += 1
+    return _random.choices(**kwargs)

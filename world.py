@@ -21,6 +21,7 @@ class DungeonWorld(arcade.View):
         self.floor_list: SpriteList = SpriteList()
         self.entities: SpriteList = SpriteList()
         self.enemies: SpriteList = SpriteList()
+        self.weapons: SpriteList = SpriteList()
 
         self.minimap = Minimap((256, 256), (255, 255, 255, 255), (128, 128))
 
@@ -31,6 +32,7 @@ class DungeonWorld(arcade.View):
         coords = self.load_level(Level())
         self.physics_engine.get_physics_object(self.player).body.position = coords
         self.entities.append(self.player)
+        self.weapons.append(self.player.weapon)
 
     def load_level(self, level: Level):
         self.wall_list = SpriteList()
@@ -52,6 +54,9 @@ class DungeonWorld(arcade.View):
     def on_update(self, delta_time: float):
         self.physics_engine.step(delta_time)
         self.player.move(self.physics_engine)
+        self.weapons.update()
+        for wpn in self.weapons:
+            wpn.on_update()
         for e in self.enemies:
             e.on_update()
         self.move_cam_to_player()
@@ -63,6 +68,7 @@ class DungeonWorld(arcade.View):
         self.wall_list.draw(filter=GL_NEAREST)
         self.entities.draw(filter=GL_NEAREST)
         self.enemies.draw(filter=GL_NEAREST)
+        self.weapons.draw(pixelated=True)
 
         self.cam_ui.use()
         self.minimap.update(self.wall_list, self.entities)

@@ -3,11 +3,14 @@ from pyglet.input import Joystick
 from pymunk import Vec2d
 
 import level
+from weapon import Weapon
 from .entity import Entity
+
+from constants import CONTROLLER_DEAD_ZONE as DEAD_ZONE, GLOBAL_SCALE
 
 
 class Player(Entity):
-    def __init__(self, world, *args, **kwargs):
+    def __init__(self, world: "world.DungeonWorld", *args, **kwargs):
         super().__init__('./assets/imgs/player/player_f.png', *args, **kwargs)
 
         self.room = None
@@ -15,6 +18,10 @@ class Player(Entity):
 
         self.speed = 1000
         self.running = False
+
+        self.weapon = Weapon(6, 'physical', 500, './assets/imgs/weapons/bow_basic.png', False, {'scale': GLOBAL_SCALE},
+                             {'img': './assets/imgs/weapons/projectiles/slingstone.png', 'scale': GLOBAL_SCALE, 'lifetime':60})
+
         # Get list of game controllers that are available
         joysticks = arcade.get_joysticks()
 
@@ -35,12 +42,17 @@ class Player(Entity):
             self.joystick = None
 
     def move(self, physics_engine: arcade.PymunkPhysicsEngine):
-        from . import DEAD_ZONE
         x = 0 if -DEAD_ZONE < self.joystick.x < DEAD_ZONE else self.joystick.x
         y = 0 if -DEAD_ZONE < self.joystick.y < DEAD_ZONE else -self.joystick.y
         vec = Vec2d(x, y)
         movement = vec * self.speed * (self.running + 1)
         physics_engine.apply_force(self, movement)
+
+        self.weapon.position = self.position
+        x = 0 if -DEAD_ZONE < self.joystick.rx < DEAD_ZONE else self.joystick.rx
+        y = 0 if -DEAD_ZONE < self.joystick.ry < DEAD_ZONE else -self.joystick.ry
+        vec = Vec2d(x, y)
+        self.weapon.angle = vec.angle_degrees
 
         self.room = self.world.room.get_room(self)
 
@@ -51,6 +63,14 @@ class Player(Entity):
             self.running = True
         elif button == 7:
             self.physics_engines[0].get_physics_object(self).body.position = self.world.load_level(level.Level())
+        elif button == 5:
+            print('attacking')
+            self.weapon.cooldown = 0
+            proj = self.weapon.attack(self)
+            print('here')
+            print(proj)
+            if proj is not None:
+                self.world.weapons.append(proj)
 
     def on_joybutton_release(self, _joystick, button):
         """ Handle button-up event for the joystick """
