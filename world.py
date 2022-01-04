@@ -6,24 +6,27 @@ from arcade import PymunkPhysicsEngine, SpriteList, Camera
 from pyglet.gl import GL_NEAREST
 from pyglet.math import Vec2
 
+from constants import GLOBAL_SCALE
 from entities import Player
+from entities.enemies import Zombie
 from level import Level, Minimap
+from weapon import Projectile
 
 
 class DungeonWorld(arcade.View):
     def __init__(self):
         super().__init__()
         self.room: Optional[Level] = None
-        self.player: Player = Player(self, scale=4)
+        self.player: Player = Player(self, scale=GLOBAL_SCALE)
         self.cam_player: Camera = Camera(800, 600)
         self.cam_ui: Camera = Camera(800, 600)
         self.wall_list: SpriteList = SpriteList()
         self.floor_list: SpriteList = SpriteList()
-        self.entities: SpriteList = SpriteList()
+        self.players: SpriteList = SpriteList()
         self.enemies: SpriteList = SpriteList()
         self.weapons: SpriteList = SpriteList()
 
-        self.minimap = Minimap((256, 256), (255, 255, 255, 255), (128, 128))
+        self.minimap = Minimap((256, 256), (0, 0, 0, 128), (128, 128))
 
         self.physics_engine = PymunkPhysicsEngine()
         self.physics_engine.add_sprite(
@@ -31,8 +34,10 @@ class DungeonWorld(arcade.View):
         )
         coords = self.load_level(Level())
         self.physics_engine.get_physics_object(self.player).body.position = coords
-        self.entities.append(self.player)
+        self.players.append(self.player)
         self.weapons.append(self.player.weapon)
+        z = Zombie(self.player, self.room, self.physics_engine, (coords[0], coords[1] + 128), scale=GLOBAL_SCALE)
+        self.enemies.append(z)
 
     def load_level(self, level: Level):
         self.wall_list = SpriteList()
@@ -57,6 +62,11 @@ class DungeonWorld(arcade.View):
         self.weapons.update()
         for wpn in self.weapons:
             wpn.on_update()
+            for spr in wpn.collides_with_list(self.enemies):
+                wpn.collide(spr)
+            if isinstance(wpn, Projectile):
+                for spr in wpn.collides_with_list(self.wall_list):
+                    wpn.collide(spr)
         for e in self.enemies:
             e.on_update()
         self.move_cam_to_player()
@@ -66,12 +76,12 @@ class DungeonWorld(arcade.View):
         self.cam_player.use()
         self.floor_list.draw(filter=GL_NEAREST)
         self.wall_list.draw(filter=GL_NEAREST)
-        self.entities.draw(filter=GL_NEAREST)
+        self.players.draw(filter=GL_NEAREST)
         self.enemies.draw(filter=GL_NEAREST)
         self.weapons.draw(pixelated=True)
 
         self.cam_ui.use()
-        self.minimap.update(self.wall_list, self.entities)
+        self.minimap.update(self.floor_list, self.players)
         self.minimap.draw()
 
         y = 600 // 2 - 200
