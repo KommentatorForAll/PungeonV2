@@ -1,7 +1,12 @@
+from typing import Optional, TYPE_CHECKING
+
 from arcade import Sprite, PymunkPhysicsEngine
 from abc import ABC
 
 from global_vars import dmg_multipliers
+
+if TYPE_CHECKING:
+    from weapon import Weapon
 
 
 class Entity(Sprite, ABC):
@@ -16,6 +21,7 @@ class Entity(Sprite, ABC):
         self.speed = 1
         self.hp = 1
         self.type = 'physical'
+        self.weapon: Optional["Weapon"] = None
 
     def move(self, physics_engine: PymunkPhysicsEngine):
         """

@@ -1,7 +1,9 @@
 from abc import ABC
+from typing import Optional
 
 from arcade import PymunkPhysicsEngine
 
+from weapon import Weapon
 from .. import Entity, Player
 from level import Level
 
@@ -19,6 +21,7 @@ class Enemy(Entity, ABC):
         super().__init__(*args, **kwargs)
         self.target: Player = target
         self.world: Level = world
+        self.weapon: Optional[Weapon] = None
 
     def move(self, physics_engine: PymunkPhysicsEngine):
         raise NotImplementedError()

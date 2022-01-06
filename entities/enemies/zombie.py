@@ -2,10 +2,10 @@ import math
 from typing import Tuple
 
 import arcade
-from arcade import Sprite
 from pymunk import Vec2d
 
 import level
+from weapon import Weapon
 from .enemy import Enemy
 from .. import Player
 
@@ -34,8 +34,11 @@ class Zombie(Enemy):
         self.position = position
         self.physics_engine.add_sprite(self, moment_of_inertia=math.inf)
 
+        # self.weapon = Weapon(5, 'ice', 100, './assets/imgs/Invis.png', False, self, {}, {'img': './assets/imgs/weapons/projectiles/Slime_blob.png', 'scale': 4, 'lifetime': 60, 'speed': 10})
+
     def on_update(self, delta_time: float = 1 / 60):
         self.move(self.physics_engine)
+        # proj = self.weapon.attack(self)
         super().update()
 
     def move(self, physics_engine: arcade.PymunkPhysicsEngine):
@@ -48,6 +51,7 @@ class Zombie(Enemy):
             dx, dy = (self.position[i] - self.target.position[i] for i in range(2))
             # rotates speed vector to the target
             vec = Vec2d(1*self.speed, 0).rotated(Vec2d(-dx, -dy).angle)
+            # self.weapon.rotation = vec.angle_degrees
             physics_engine.set_velocity(self, vec)
         else:
             # stops moving, once they the enemy and the target don't share a room anymore

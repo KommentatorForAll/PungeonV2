@@ -1,16 +1,20 @@
 import arcade
 from pyglet.input import Joystick
 from pymunk import Vec2d
+from typing import TYPE_CHECKING
 
 import level
 from weapon import Weapon
 from .entity import Entity
 
+if TYPE_CHECKING:
+    from world import DungeonWorld
+
 from constants import CONTROLLER_DEAD_ZONE as DEAD_ZONE, GLOBAL_SCALE
 
 
 class Player(Entity):
-    def __init__(self, world: "world.DungeonWorld", *args, **kwargs):
+    def __init__(self, world: "DungeonWorld", *args, **kwargs):
         """
         The player. Controlled by a phenomena called 'user' (scary, i know)
         :param world: the current level
@@ -19,19 +23,23 @@ class Player(Entity):
         """
         super().__init__('./assets/imgs/player/player_f.png', *args, **kwargs)
 
+        self.hp = 20
+
         self.world = world
         # the current room the player is in, determined by their position in the world
         self.room = None
 
         self.speed = 1000
         self.running = False
+        self.shoot_is_down = False
+
+        self.physics_engine = world.physics_engine
 
         # The last known rotation of the weapon, before the controller entered the DEAD_ZONE
         self.old_rot = (0, 0)
 
         # The players current weapon.
-        self.weapon = Weapon(6, 'physical', 0, './assets/imgs/weapons/bow_basic.png', False, self, {'scale': GLOBAL_SCALE},
-                             {'img': './assets/imgs/weapons/projectiles/slingstone.png', 'scale': GLOBAL_SCALE, 'lifetime':60, 'speed': 5})
+        world.weaponize(self, 'bow_basic')
 
         # Get list of game controllers that are available
         joysticks = arcade.get_joysticks()
@@ -67,19 +75,23 @@ class Player(Entity):
         movement = vec * self.speed * (self.running + 1)
         physics_engine.apply_force(self, movement)
 
-        # updates the weapons sprite position to the players position
-        self.weapon.position = self.position
-
         # right stick position including DEAD_ZONE
-        x = self.old_rot[0] if -DEAD_ZONE < self.joystick.rx < DEAD_ZONE else self.joystick.rx
-        y = self.old_rot[1] if -DEAD_ZONE < self.joystick.ry < DEAD_ZONE else -self.joystick.ry
+        x = self.joystick.rx
+        y = -self.joystick.ry
 
         vec = Vec2d(x, y)
         self.old_rot = (x, y)
         self.weapon.angle = vec.angle_degrees
 
+        if self.shoot_is_down:
+            self.weapon.attack(self, vec, self.physics_engine.get_physics_object(self).body.velocity)
+
         # update current room
         self.room = self.world.room.get_room(self)
+
+    def on_update(self, delta_time: float = 1/60):
+        self.weapon.position = self.position
+        self.move(self.physics_engine)
 
     def on_joybutton_press(self, _joystick, button):
         """ Handle button-down event for the joystick """
@@ -92,9 +104,7 @@ class Player(Entity):
             self.physics_engines[0].get_physics_object(self).body.position = self.world.load_level(level.Level())
         # using rb to attack
         elif button == 5:
-            proj = self.weapon.attack(self)
-            if proj is not None:
-                self.world.weapons.append(proj)
+            self.shoot_is_down = True
 
     def on_joybutton_release(self, _joystick, button):
         """ Handle button-up event for the joystick """
@@ -102,3 +112,5 @@ class Player(Entity):
         # resetting run after we stopped pressing the button
         if button == 2:
             self.running = False
+        elif button == 5:
+            self.shoot_is_down = False
